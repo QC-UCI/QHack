@@ -1,4 +1,3 @@
-# QHack
 ## Quantum Enhanced GAN for HEP
 
 ### Overview 
@@ -7,6 +6,14 @@ To enhance the generative adversarial networks used in the high energy physics (
 \* To overcome the training instability, HEP community often uses Wasserstein GANs. Due to time constraints, we plan to investigate a quantum enhanced Wassertein GANs in the future.
 
 ### Procedure
+- Construct QC-AAN with multi-basis QCBM and CaloGAN
+
+- Run experiments against particle physics dataset and compare it against vanilla CaloGAN with the metrics in the next section
+
+- If time permits, repeat the experiments and compare it against 
+  - Wasserstein CalGAN
+  - Restricted boltzmann machine (RBM) based AAN
+
 
 
 ### Metric
