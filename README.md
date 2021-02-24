@@ -24,6 +24,10 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 - Mode (energy) diversity
 
 
+### Resource Estimate
+
+
+
 ### Reference
 [1] M. S. Rudolph, N. B. Toussaint, A. Katabarwa, S. Johri, B. Peropadre, and A. Perdomo-Ortiz, Generation of High-Resolution Handwritten Digits with an Ion-Trap Quantum Computer, (2020).
 
