@@ -6,6 +6,7 @@ import sys
 from dotenv import load_dotenv
 import os
 
+num_layers = 7
 num_wires = 8
 num_shots = 20_000
 #np.random.seed(0)
@@ -24,10 +25,28 @@ except:
 #dev = qml.device("default.qubit", wires=num_wires, analytic=True, shots=num_shots)
 ######################
 
-def ansatz(weights, num_wires):
+def template_ansatz(weights, num_wires):
     """U(theta) to prepare the state"""
     qml.templates.layers.StronglyEntanglingLayers(weights,
                                                   wires=range(num_wires))
+
+def ansatz(weights, num_wires):
+    """QCBM ansatz from https://arxiv.org/abs/2012.03924"""
+    for layer in range(len(weights)):
+        if layer == 0:
+            for q in range(num_wires):
+                qml.RX(weights[layer][q][0], wires=q)
+                qml.RZ(weights[layer][q][1], wires=q)
+        elif layer % 2 == 1:
+            for q1 in range(num_wires):
+                for q2 in range(q1+1, num_wires):
+                    qml.CNOT(wires=[q1, q2])
+                    qml.RX(weights[layer][q1][q2-q1-1], wires=q1)
+                    qml.CNOT(wires=[q1, q2])
+        else:
+            for q in range(num_wires):
+                qml.RZ(weights[layer][q][0], wires=q)
+                qml.RX(weights[layer][q][1], wires=q)
 
 @qml.qnode(dev)
 def qcbm_probs(weights, num_wires):
@@ -97,12 +116,27 @@ def particle_swarm_optim(f, init_params):
     pass
 
 #########################
+    
+def initialize_weights(layers, num_wires):
+    """Initialize weights for the QCBM ansatz"""
+    a = []
+    for l in range(layers):
+        a.append([])
+        if l % 2 == 0:
+            for _ in range(num_wires):
+                a[l].append([np.random.random()*np.pi*2, np.random.random()*np.pi*2])
+        else:
+            for i in range(num_wires-1):
+                a[l].append([np.random.random()*np.pi*2 for _ in range(num_wires-1-i)])
+    return np.array(a)
+
+#########################
 #########################
 if __name__ == "__main__":
     #Test the model
-    weights = np.random.random((5, num_wires, 3))
-    
-    print(f"num_wires: {num_wires}, num_shots: {num_shots}, num_layers: {weights.shape[0]}")
+
+    weights = initialize_weights(num_layers, num_wires)
+    print(f"num_wires: {num_wires}, num_shots: {num_shots}, num_layers: {num_layers}")
 
     #For testing, generate an exact probability distribution to learn
     exact_prob_dist = np.random.random(2**num_wires)
