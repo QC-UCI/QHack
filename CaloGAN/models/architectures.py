@@ -6,12 +6,12 @@ description: sub-architectures for [arXiv/1705.02355]
 author: Luke de Oliveira (lukedeo@manifold.ai)
 """
 
-import keras.backend as K
-from keras.initializers import constant
-from keras.layers import (Dense, Reshape, Conv2D, LeakyReLU, BatchNormalization,
+import tensorflow.keras.backend as K
+from tensorflow.keras.initializers import constant
+from tensorflow.keras.layers import (Dense, Reshape, Conv2D, LeakyReLU, BatchNormalization,
                           LocallyConnected2D, Activation, ZeroPadding2D,
                           Dropout, Lambda, Flatten)
-from keras.layers.merge import concatenate, multiply
+from tensorflow.keras.layers import concatenate, multiply
 import numpy as np
 
 
@@ -31,13 +31,13 @@ def build_generator(x, nb_rows, nb_cols):
 
     Args:
     -----
-        x: a keras Input with shape (None, latent_dim)
+        x: a tensorflow.keras Input with shape (None, latent_dim)
         nb_rows: int, number of desired output rows
         nb_cols: int, number of desired output cols
 
     Returns:
     --------
-        a keras tensor with the transformation applied
+        a tensorflow.keras tensor with the transformation applied
     """
 
     x = Dense((nb_rows + 2) * (nb_cols + 2) * 36)(x)
@@ -61,7 +61,7 @@ def build_discriminator(image, mbd=False, sparsity=False, sparsity_mbd=False):
 
     Args:
     -----
-        image: keras tensor of 4 dimensions (i.e. the output of one calo layer)
+        image: tensorflow.keras tensor of 4 dimensions (i.e. the output of one calo layer)
         mdb: bool, perform feature level minibatch discrimination
         sparsiry: bool, whether or not to calculate and include sparsity
         sparsity_mdb: bool, perform minibatch discrimination on the sparsity 
@@ -69,7 +69,7 @@ def build_discriminator(image, mbd=False, sparsity=False, sparsity_mbd=False):
 
     Returns:
     --------
-        a keras tensor of features
+        a tensorflow.keras tensor of features
 
     """
 

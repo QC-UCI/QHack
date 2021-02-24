@@ -7,11 +7,11 @@ description: ancillary ops for [arXiv/1705.02355]
 author: Luke de Oliveira (lukedeo@manifold.ai)
 """
 
-import keras.backend as K
-from keras.engine import InputSpec, Layer
-from keras import initializers, regularizers, constraints, activations
-from keras.layers import Lambda, ZeroPadding2D, LocallyConnected2D
-from keras.layers.merge import concatenate, multiply
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import InputSpec, Layer
+from tensorflow.keras import initializers, regularizers, constraints, activations
+from tensorflow.keras.layers import Lambda, ZeroPadding2D, LocallyConnected2D
+from tensorflow.keras.layers import concatenate, multiply
 
 import numpy as np
 
@@ -79,7 +79,7 @@ def minibatch_output_shape(input_shape):
 
 
 def single_layer_energy(x):
-    shape = K.get_variable_shape(x)
+    shape = K.int_shape(x)
     return K.reshape(K.sum(x, axis=range(1, len(shape))), (-1, 1))
 
 
@@ -98,7 +98,7 @@ def threshold_indicator(x, thresh):
 
 
 def sparsity_level(x):
-    _shape = K.get_variable_shape(x)
+    _shape = K.int_shape(x)
     shape = K.shape(x)
     total = K.cast(K.prod(shape[1:]), K.floatx())
     return K.reshape(K.sum(

@@ -98,15 +98,15 @@ if __name__ == '__main__':
     parse_args = parser.parse_args()
 
     # delay the imports so running train.py -h doesn't take 5,234,807 years
-    import keras.backend as K
-    from keras.layers import (Activation, AveragePooling2D, Dense, Embedding,
+    import tensorflow.keras.backend as K
+    from tensorflow.keras.layers import (Activation, AveragePooling2D, Dense, Embedding,
                               Flatten, Input, Lambda, UpSampling2D)
-    from keras.layers.merge import add, concatenate, multiply
-    from keras.models import Model
-    from keras.optimizers import Adam
-    from keras.utils.generic_utils import Progbar
+    from tensorflow.keras.layers import add, concatenate, multiply
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.utils import Progbar
 
-    K.set_image_dim_ordering('tf')
+    #K.set_image_data_format('tf')
 
     from ops import (minibatch_discriminator, minibatch_output_shape, Dense3D,
                      calculate_energy, scale, inpainting_attention)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
             raise exc
     nb_classes = len(s.keys())
     logger.info('{} particle types found.'.format(nb_classes))
-    for name, pth in s.iteritems():
+    for name, pth in s.items():
         logger.debug('class {} <= {}'.format(name, pth))
 
     def _load_data(particle, datafile):
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
     first, second, third, y, energy, sizes = [
         np.concatenate(t) for t in [
-            a for a in zip(*[_load_data(p, f) for p, f in s.iteritems()])
+            a for a in zip(*[_load_data(p, f) for p, f in s.items()])
         ]
     ]
 
