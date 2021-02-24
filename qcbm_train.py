@@ -8,11 +8,12 @@ import os
 
 num_layers = 7
 num_wires = 8
-num_shots = 50_000
+num_shots = 20_000
 #np.random.seed(0)
 
 load_dotenv()
 API_KEY = os.environ.get("FLOQ_KEY")
+
 try:
     sim = remote_cirq.RemoteSimulator(API_KEY)
     dev = qml.device("cirq.simulator", wires=num_wires, simulator=sim, analytic=False, shots=num_shots)
@@ -20,7 +21,8 @@ try:
 except:
     print("FLOQ_key not found in .env, using default.qubit simulator")
     dev = qml.device("default.qubit", wires=num_wires, shots=num_shots)
-
+    
+#dev = qml.device("default.qubit", wires=num_wires, analytic=True, shots=num_shots)
 ######################
 
 def template_ansatz(weights, num_wires):
@@ -60,7 +62,7 @@ def qcbm_sample(weights, num_wires):
 
 ######################
 
-def KL_Loss(P, Q, eps=1E-4):
+def KL_Loss(P, Q, eps=0.1/num_shots):
     """A loss function: Kullback-Leibler divergence AKA relative entropy between two probability distributions.
     Args:
         P, Q: arrays of shape (2**num_wires,), representing probability distributions
@@ -91,16 +93,17 @@ def qcbm_approx_probs(weights, num_wires):
     
     return prob_dict
 
-def KL_Loss_dict(p_dict, q_dict, eps=1E-4):
+def KL_Loss_dict(p_dict, q_dict, eps=0.1/num_shots):
     """Kullback-Leibler divergence, but using dicts as arguments instead"""
     cost = 0.0
     for outcome, prob in p_dict.items():
-        cost+= prob * np.log(prob / (q_dict.get(outcome, eps)))
+        #print(outcome, prob, q_dict.get(outcome))
+        cost += prob * np.log(prob / (q_dict.get(outcome, eps)))
     return cost
 
 ####################
 
-def SPSA_grad(f, theta, delta=1E-3):
+def SPSA_grad(f, theta, delta=1E-2):
     """gradient of f at theta, approximated using
         Simultaneous Perturbation Stochastic Approximation"""
 
@@ -131,8 +134,8 @@ def initialize_weights(layers, num_wires):
 #########################
 if __name__ == "__main__":
     #Test the model
+
     weights = initialize_weights(num_layers, num_wires)
-    
     print(f"num_wires: {num_wires}, num_shots: {num_shots}, num_layers: {num_layers}")
 
     #For testing, generate an exact probability distribution to learn
@@ -155,16 +158,20 @@ if __name__ == "__main__":
     #########
 
     print("Training using approximate sample probabilities")
-    for i in range(500):
-        weights = weights - 0.005* SPSA_grad(approx_cost_fn, weights) #cost using approx sample probabilities
+    for i in range(15_000):
+        weights = weights - 0.01* SPSA_grad(approx_cost_fn, weights) #cost using approx sample probabilities
         #weights = weights - 0.01* exact_grad_cost(weights) #cost using exact sample probabilities
-        if i % 10 == 0:
+        if i % 100 == 0:
+            #print("Approx Cost:", KL_Loss_dict(exact_prob_dict, qcbm_approx_probs(weights, num_wires)))
             print("True Cost:", KL_Loss(exact_prob_dist, qcbm_probs(weights, num_wires)))
 
     #current results: analytic probabilities do better than sampled probabilities. Maybe adjust eps?
     #SPSA is fast. will try particle swarm optimization next
     #Still hard to train using approximate probabilities, even with 50000 shots the cost doesn't get low
     #100_000 shots: cost gets down to 0.53, slow on Floq though
+    
+    #Even with exact, analytic gradient, lower limit to cost seems to be
+    #Perhaps changing the ansatz may help?
 
     print(KL_Loss(exact_prob_dist, qcbm_probs(weights, num_wires)))
     print(qcbm_sample(weights, num_wires).shape)
