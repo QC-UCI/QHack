@@ -131,3 +131,4 @@ dmypy.json
 # dataset and training
 **/data
 *.hdf5
+exp_*
