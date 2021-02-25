@@ -56,7 +56,10 @@ def get_parser():
                         help='batch size per update')
 
     parser.add_argument('--latent-size', action='store', type=int, default=1024,
-                        help='size of random N(0, 1) latent space to sample')
+                        help='size of QCBM prior latent space to sample')
+
+    parser.add_argument('--nb-samples', action='store', type=int, default=-1,
+                        help='number of samples to train')
 
     parser.add_argument('--disc-lr', action='store', type=float, default=2e-5,
                         help='Adam learning rate for discriminator')
@@ -130,6 +133,7 @@ if __name__ == '__main__':
     nb_epochs = parse_args.nb_epochs
     batch_size = parse_args.batch_size
     latent_size = parse_args.latent_size
+    nb_samples = parse_args.nb_samples
     verbose = parse_args.prog_bar
     no_attn = parse_args.no_attn
 
@@ -144,6 +148,7 @@ if __name__ == '__main__':
     logger.debug('number of epochs = {}'.format(nb_epochs))
     logger.debug('batch size = {}'.format(batch_size))
     logger.debug('latent size = {}'.format(latent_size))
+    logger.debug('number of samples = {}'.format(latent_size))
     logger.debug('progress bar enabled = {}'.format(verbose))
     logger.debug('Using attention = {}'.format(no_attn == False))
     logger.debug('discriminator learning rate = {}'.format(disc_lr))
@@ -170,11 +175,12 @@ if __name__ == '__main__':
         d = h5py.File(datafile, 'r')
 
         # make our calo images channels-last
-        first = np.expand_dims(d['layer_0'][:], -1)
-        second = np.expand_dims(d['layer_1'][:], -1)
-        third = np.expand_dims(d['layer_2'][:], -1)
+        first = np.expand_dims(d['layer_0'][:nb_samples], -1)
+        second = np.expand_dims(d['layer_1'][:nb_samples], -1)
+        third = np.expand_dims(d['layer_2'][:nb_samples], -1)
+
         # convert to MeV
-        energy = d['energy'][:].reshape(-1, 1) * 1000
+        energy = d['energy'][:nb_samples].reshape(-1, 1) * 1000
 
         sizes = [
             first.shape[1], first.shape[2],
@@ -477,8 +483,8 @@ if __name__ == '__main__':
             epoch + 1, np.mean(epoch_disc_loss, axis=0)))
 
         # save weights every epoch
-        generator.save_weights('{0}{1:03d}.hdf5'.format(parse_args.g_pfx, epoch),
+        generator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.g_pfx, epoch),
                                overwrite=True)
 
-        discriminator.save_weights('{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch),
+        discriminator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch),
                                    overwrite=True)
