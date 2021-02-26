@@ -8,7 +8,7 @@ import os
 
 num_layers = 7
 num_wires = 8
-num_shots = 20_000
+num_shots = 100
 #np.random.seed(0)
 
 load_dotenv()
@@ -137,7 +137,7 @@ def train_qcbm(exact_prob_dist, weights):
     def approx_cost_fn(weights):
         return KL_Loss_dict(exact_prob_dict, qcbm_approx_probs(weights, num_wires))
 
-    for i in range(1000):
+    for i in range(300):
         weights = weights - 0.01* SPSA_grad(approx_cost_fn, weights) #cost using approx sample probabilities
         #weights = weights - 0.01* exact_grad_cost(weights) #cost using exact sample probabilities
         if i % 100 == 0:
