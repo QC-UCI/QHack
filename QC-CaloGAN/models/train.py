@@ -127,8 +127,8 @@ if __name__ == '__main__':
     from ops import (minibatch_discriminator, minibatch_output_shape, Dense3D,
                      calculate_energy, scale, inpainting_attention)
 
-    from exp_architectures import build_generator, build_discriminator
-    from exp_qcbm import (qcbm_approx_probs, qcbm_probs, initialize_weights, 
+    from architectures import build_generator, build_discriminator
+    from qcbm import (qcbm_approx_probs, qcbm_probs, initialize_weights, 
                           train_qcbm, SPSA_grad, KL_Loss)
 
     # batch, latent size, and whether or not to be verbose with a progress bar
