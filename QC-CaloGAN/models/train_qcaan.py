@@ -530,6 +530,12 @@ if __name__ == '__main__':
         logger.info('Epoch {:3d} Discriminator loss: {}'.format(
             epoch + 1, np.mean(epoch_disc_loss, axis=0)))
 
+        with open("qcaan_loss","a") as logf:
+            logf.write('Epoch {:3d} Generator loss: {}\n'.format(
+                epoch + 1, np.mean(epoch_gen_loss, axis=0)))
+            logf.write('Epoch {:3d} Discriminator loss: {}\n'.format(
+                epoch + 1, np.mean(epoch_disc_loss, axis=0)))
+
         # save weights every epoch
         generator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.g_pfx, epoch),
                                overwrite=True)
