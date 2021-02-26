@@ -21,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
 import sys
 import yaml
+import h5py
 
 
 if __name__ == '__main__':
@@ -56,7 +57,19 @@ def get_parser():
                         help='batch size per update')
 
     parser.add_argument('--latent-size', action='store', type=int, default=1024,
-                        help='size of random N(0, 1) latent space to sample')
+                        help='size of classical prior from N(0,1) to sample')
+
+    parser.add_argument('--nb-qubits', action='store', type=int, default=8,
+                        help='number of qubits to use for QCBM')
+
+    parser.add_argument('--qcbm-nb-layer', action='store', type=int, default=7,
+                        help='number of layers for QCBM ansatz')
+
+    parser.add_argument('--qcbm-nb-shots', action='store', type=int, default=20000,
+                        help='number of shots for QCBM')
+
+    parser.add_argument('--nb-samples', action='store', type=int, default=-1,
+                        help='number of samples to train')
 
     parser.add_argument('--disc-lr', action='store', type=float, default=2e-5,
                         help='Adam learning rate for discriminator')
@@ -98,6 +111,7 @@ if __name__ == '__main__':
     parse_args = parser.parse_args()
 
     # delay the imports so running train.py -h doesn't take 5,234,807 years
+    import tensorflow as tf
     import tensorflow.keras.backend as K
     from tensorflow.keras.layers import (Activation, AveragePooling2D, Dense, Embedding,
                               Flatten, Input, Lambda, UpSampling2D)
@@ -111,7 +125,9 @@ if __name__ == '__main__':
     from ops import (minibatch_discriminator, minibatch_output_shape, Dense3D,
                      calculate_energy, scale, inpainting_attention)
 
-    from architectures import build_generator, build_discriminator
+    from exp_architectures import build_generator, build_discriminator
+    from exp_qcbm import (qcbm_approx_probs, qcbm_probs, initialize_weights, 
+                          train_qcbm, SPSA_grad, KL_Loss)
 
     # batch, latent size, and whether or not to be verbose with a progress bar
 
@@ -130,6 +146,10 @@ if __name__ == '__main__':
     nb_epochs = parse_args.nb_epochs
     batch_size = parse_args.batch_size
     latent_size = parse_args.latent_size
+    nb_qubits = parse_args.nb_qubits
+    qcbm_nb_layers = parse_args.qcbm_nb_layer
+    qcbm_nb_shots = parse_args.qcbm_nb_shots
+    nb_samples = parse_args.nb_samples
     verbose = parse_args.prog_bar
     no_attn = parse_args.no_attn
 
@@ -139,11 +159,15 @@ if __name__ == '__main__':
 
     yaml_file = parse_args.dataset
 
+    if nb_qubits > 0:
+        latent_size = 2**nb_qubits
+
     logger.debug('parameter configuration:')
 
     logger.debug('number of epochs = {}'.format(nb_epochs))
     logger.debug('batch size = {}'.format(batch_size))
     logger.debug('latent size = {}'.format(latent_size))
+    logger.debug('number of image samples = {}'.format(nb_samples))
     logger.debug('progress bar enabled = {}'.format(verbose))
     logger.debug('Using attention = {}'.format(no_attn == False))
     logger.debug('discriminator learning rate = {}'.format(disc_lr))
@@ -170,11 +194,12 @@ if __name__ == '__main__':
         d = h5py.File(datafile, 'r')
 
         # make our calo images channels-last
-        first = np.expand_dims(d['layer_0'][:], -1)
-        second = np.expand_dims(d['layer_1'][:], -1)
-        third = np.expand_dims(d['layer_2'][:], -1)
+        first = np.expand_dims(d['layer_0'][:nb_samples], -1)
+        second = np.expand_dims(d['layer_1'][:nb_samples], -1)
+        third = np.expand_dims(d['layer_2'][:nb_samples], -1)
+
         # convert to MeV
-        energy = d['energy'][:].reshape(-1, 1) * 1000
+        energy = d['energy'][:nb_samples].reshape(-1, 1) * 1000
 
         sizes = [
             first.shape[1], first.shape[2],
@@ -273,7 +298,9 @@ if __name__ == '__main__':
         mbd_energy
     ])
 
-    fake = Dense(1, activation='sigmoid', name='fakereal_output')(p)
+    qcbm_w = Dense(2**nb_qubits, activation='linear', name='qcbm')(p)
+
+    fake = Dense(1, activation='sigmoid', name='fakereal_output')(qcbm_w)
     discriminator_outputs = [fake, total_energy]
     discriminator_losses = ['binary_crossentropy', 'mae']
     # ACGAN case
@@ -291,6 +318,18 @@ if __name__ == '__main__':
             discriminator_losses.append('binary_crossentropy')
 
     discriminator = Model(calorimeter + [input_energy], discriminator_outputs)
+
+    tf.keras.utils.plot_model(
+	discriminator,
+	to_file="discriminator.png",
+	show_shapes=True,
+	show_dtype=False,
+	show_layer_names=True,
+	rankdir="TB",
+	expand_nested=False,
+	dpi=96,
+    )
+
 
     discriminator.compile(
         optimizer=Adam(lr=disc_lr, beta_1=adam_beta_1),
@@ -370,6 +409,7 @@ if __name__ == '__main__':
 
     logger.info('commencing training')
 
+    qcbm_weights = initialize_weights(qcbm_nb_layers, nb_qubits)
     for epoch in range(nb_epochs):
         logger.info('Epoch {} of {}'.format(epoch + 1, nb_epochs))
 
@@ -389,8 +429,18 @@ if __name__ == '__main__':
                 elif index % 10 == 0:
                     logger.debug('processed {}/{} batches'.format(index + 1, nb_batches))
 
-            # generate a new batch of noise
-            noise = np.random.normal(0, 1, (batch_size, latent_size))
+            # sample from QCBM
+            if nb_qubits > 0:
+                logger.info('sampling prior from QCBM...')
+                noise = qcbm_approx_probs(qcbm_weights, nb_qubits) 
+                noise = np.array([i for i in noise.values()])
+                noise = np.concatenate((noise,np.zeros(latent_size-noise.size)))
+                logger.info(noise)
+                logger.info(noise.shape)
+                noise = np.tile(noise, (batch_size, 1))
+                logger.info(noise.shape)
+            else:
+                noise = np.random.normal(0, 1, (batch_size, latent_size))
 
             # get a batch of real images
             image_batch_1 = first[index * batch_size:(index + 1) * batch_size]
@@ -477,8 +527,14 @@ if __name__ == '__main__':
             epoch + 1, np.mean(epoch_disc_loss, axis=0)))
 
         # save weights every epoch
-        generator.save_weights('{0}{1:03d}.hdf5'.format(parse_args.g_pfx, epoch),
+        generator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.g_pfx, epoch),
                                overwrite=True)
 
-        discriminator.save_weights('{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch),
+        discriminator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch),
                                    overwrite=True)
+
+        dis_weights_f = h5py.File('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch), 'r')
+        qcbm_dis_weights = dis_weights_f['fakereal_output']['fakereal_output']['kernel:0'][:].flatten()
+        logger.info("discriminator qcbm weights ({}): {}".format(qcbm_dis_weights.shape,qcbm_dis_weights))
+        qcbm_weights = train_qcbm(qcbm_dis_weights, qcbm_weights)
+        dis_weights_f.close()
