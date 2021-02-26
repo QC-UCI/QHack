@@ -6,13 +6,13 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 \* To overcome the training instability, HEP community often uses Wasserstein GANs. Due to time constraints, we plan to investigate a quantum enhanced Wassertein GANs in the future.
 
 ### Procedure
-- Construct QC-AAN with multi-basis QCBM and CaloGAN
+- [ ] Construct QC-AAN with multi-basis QCBM and CaloGAN
 
-- Run experiments on the ECal Shower dataset [4] and compare QC-ANN against vanilla CaloGAN with the metrics in the next section
+- [ ] Run experiments on the ECal Shower dataset [4] and compare QC-ANN against vanilla CaloGAN with the metrics in the next section
 
 - If time permits, repeat the experiments and compare it against 
-  - Wasserstein CaloGAN
-  - Restricted Boltzmann Machine (RBM) based AAN
+  - [ ] Wasserstein CaloGAN
+  - [ ] Restricted Boltzmann Machine (RBM) based AAN
 
 
 ### Metrics
