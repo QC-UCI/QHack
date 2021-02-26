@@ -32,10 +32,6 @@ def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_we
     return pos.reshape(param_shape)
 
 
-
-
-
-
 if __name__ == "__main__":
     #Tests
     from loss_functions import KL_Loss, KL_Loss_dict

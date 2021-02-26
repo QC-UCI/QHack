@@ -152,9 +152,54 @@ class QCBM():
         self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=12, iters=iters, init_weight=self.weights)
 
 
+    def train_qcbm_grad_descent(self, exact_prob_dist, iters=500):
+        """Train the QCBM"""
+        exact_prob_dict = {outcome:exact_prob_dist[outcome] for outcome in range(2**num_wires)}
+        def approx_cost_fn(weights):
+            return KL_Loss_dict(exact_prob_dict, qcbm_approx_probs(weights, num_wires))
+        
+        weights = self.weights
+        for i in range(iters):
+            weights = weights - 0.01* SPSA_grad(approx_cost_fn, weights) #cost using approx sample probabilities
+            #weights = weights - 0.01* exact_grad_cost(weights) #cost using exact sample probabilities
+            if i % 100 == 0:
+                #print("Approx Cost:", KL_Loss_dict(exact_prob_dict, qcbm_approx_probs(weights, num_wires)))
+                print("True Cost:", KL_Loss(exact_prob_dist, qcbm_probs(weights, num_wires)))
+        self.weights = weights
 
 
-    
+
+def KL_Loss(P, Q, eps=1E-4):
+    """A loss function: Kullback-Leibler divergence AKA relative entropy between two probability distributions.
+    Args:
+        P, Q: arrays of shape (2**num_wires,), representing probability distributions
+        eps: small value, prevents divergence in log if Q = 0"""
+
+    mask = P > 0
+    return np.sum(P[mask] * np.log(P[mask] / (Q[mask]+eps)) )
+
+def KL_Loss_dict(p_dict, q_dict, eps=1E-4):
+    """Kullback-Leibler divergence, but using dicts as arguments instead"""
+    cost = 0.0
+    for outcome, prob in p_dict.items():
+        cost += prob * np.log(prob / (q_dict.get(outcome,0)+eps))
+    return cost
+
+def LL_Loss(P, Q, eps=1E-4):
+    """Log-likelihood cost
+    Args:
+        P, Q: arrays of shape (2**num_wires,), representing probability distributions
+        eps: small value, prevents divergence in log if Q = 0"""
+
+    mask = P > 0
+    return np.sum(P[mask] * np.log(P[mask] / (Q[mask]+eps)) )
+
+def LL_Loss_dict(p_dict, q_dict, eps=1E-4):
+    """Log-likelihood cost, but using dicts as arguments instead"""
+    cost = 0.0
+    for outcome, prob in p_dict.items():
+        cost -= np.log(q_dict.get(outcome,0)+eps)
+    return cost
 
 
 if __name__ == "__main__":
