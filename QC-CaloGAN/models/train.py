@@ -104,6 +104,8 @@ def get_parser():
 
     return parser
 
+def sigmoid(x):
+    return 1 / (1+np.exp(-x))
 
 if __name__ == '__main__':
 
@@ -536,5 +538,5 @@ if __name__ == '__main__':
         dis_weights_f = h5py.File('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch), 'r')
         qcbm_dis_weights = dis_weights_f['fakereal_output']['fakereal_output']['kernel:0'][:].flatten()
         logger.info("discriminator qcbm weights ({}): {}".format(qcbm_dis_weights.shape,qcbm_dis_weights))
-        qcbm_weights = train_qcbm(qcbm_dis_weights, qcbm_weights)
+        qcbm_weights = train_qcbm(sigmoid(qcbm_dis_weights), qcbm_weights)
         dis_weights_f.close()
