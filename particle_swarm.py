@@ -4,7 +4,7 @@ from pennylane import numpy as np
 
 """Some code to wrap the particle swarm optimization from PySwarms"""
 
-def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_weight=None):
+def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_weight=None, n_processes=None):
     """Optimizes the parameters with PySwarms particle swarm optimization
         Args:
             cost: cost function, takes in a numpy array and outputs a scalar
@@ -28,7 +28,7 @@ def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_we
     optimizer = ps.single.GlobalBestPSO(
                                 n_particles=num_particles, dimensions=size,
                                 options=options, init_pos=init_weight)
-    final_cost, pos = optimizer.optimize(f, iters=iters, n_processes=None, verbose=True)
+    final_cost, pos = optimizer.optimize(f, iters=iters, n_processes=n_processes, verbose=True)
     return pos.reshape(param_shape)
 
 

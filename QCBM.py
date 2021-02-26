@@ -20,7 +20,7 @@ def template_ansatz(weights, num_wires):
     qml.templates.layers.StronglyEntanglingLayers(weights,
                                                 wires=range(num_wires))
 
-def ansatz(weights, num_wires):
+def paper_ansatz(weights, num_wires):
     """QCBM ansatz from https://arxiv.org/abs/2012.03924"""
     for layer in range(len(weights)):
         if layer == 0:
@@ -37,16 +37,6 @@ def ansatz(weights, num_wires):
             for q in range(num_wires):
                 qml.RZ(weights[layer][q][0], wires=q)
                 qml.RX(weights[layer][q][1], wires=q)
-
-def qcbm_probs(weights, num_wires):
-    """Returns array of probabilities"""
-    ansatz(weights, num_wires)
-    return qml.probs(range(num_wires))
-
-def qcbm_sample(weights, num_wires):
-    """Returns many samples. Array of size (num_qubits, shots) """ 
-    ansatz(weights,num_wires)
-    return [qml.sample(qml.PauliZ(i)) for i in range(num_wires)]
 
 def initialize_weights(layers, num_wires):
     """Initialize weights for the QCBM ansatz"""
@@ -69,7 +59,7 @@ def prob_array_to_dict(prob_array):
 class QCBM():
     """Class for the QCBM"""
 
-    def __init__(self, num_layers, num_wires, num_shots, Floq=True):
+    def __init__(self, num_layers, num_wires, num_shots, Floq=True, ansatz=paper_ansatz):
         self.num_layers = num_layers
         self.num_wires = num_wires
         self.weights = initialize_weights(num_layers, num_wires)
@@ -96,8 +86,19 @@ class QCBM():
 
         #Perhaps another option to use default.qubit but with sampled probabilities?
 
-        self._qcbm_sample = qml.qnode(self.dev)(qcbm_sample)
+        def qcbm_probs(weights, num_wires):
+            """Returns array of probabilities"""
+            ansatz(weights, num_wires)
+            return qml.probs(range(num_wires))
+
+        def qcbm_sample(weights, num_wires):
+            """Returns many samples. Array of size (num_qubits, shots) """ 
+            ansatz(weights, num_wires)
+            return [qml.sample(qml.PauliZ(i)) for i in range(num_wires)]
+
         self._qcbm_probs = qml.qnode(self.dev)(qcbm_probs)
+        self._qcbm_sample = qml.qnode(self.dev)(qcbm_sample)
+        
 
     def _qcbm_approx_probs(self, params):
         """Approximate probabilities by sampling.
@@ -128,8 +129,8 @@ class QCBM():
 
 
     #Optimize KL divergence from a probability distribution
-
-    def train_on_prob_dict(self, prob_dict, iters=10):
+    #n_processes is an argument in PySwarms optimize function. Use >= 2 for parallelism
+    def train_on_prob_dict(self, prob_dict, iters=10, n_processes=None):
 
         if not self._use_exact_probs:
             def _cost_fn(params):
@@ -139,14 +140,14 @@ class QCBM():
                 q_dict = prob_array_to_dict(self._qcbm_probs(params, self.num_wires))
                 return KL_Loss_dict(prob_dict, q_dict)
 
-        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=self.num_wires*2, iters=iters, init_weight=self.weights)
+        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=16, iters=iters, init_weight=self.weights)
     
-    def train_on_prob_array(self, prob_array, iters=10):
+    def train_on_prob_array(self, prob_array, iters=10, n_processes=None):
 
         def _cost_fn(weights):
             return KL_Loss(prob_array, self._qcbm_probs(weights, self.num_wires))
 
-        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=self.num_wires*2, iters=iters, init_weight=self.weights)
+        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=16, iters=iters, init_weight=self.weights)
 
 
 
@@ -163,5 +164,5 @@ if __name__ == "__main__":
     exact_prob_dict = {i:1/64 for i in range(64)}
 
     qcbm = QCBM(7, 8, 5000, True)
-    qcbm.train_on_prob_dict(exact_prob_dict, iters=5)
+    qcbm.train_on_prob_dict(exact_prob_dict, iters=100, n_processes=2)
 
