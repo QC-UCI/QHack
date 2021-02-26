@@ -130,6 +130,10 @@ def initialize_weights(layers, num_wires):
                 a[l].append([np.random.random()*np.pi*2 for _ in range(num_wires-1-i)])
     return np.array(a)
 
+def train_qcbm(true_prob, weights):
+    """Train the QCBM"""
+    return weights  
+
 #########################
 #########################
 if __name__ == "__main__":

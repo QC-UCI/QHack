@@ -21,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
 import sys
 import yaml
+import h5py
 
 
 if __name__ == '__main__':
@@ -110,6 +111,7 @@ if __name__ == '__main__':
     parse_args = parser.parse_args()
 
     # delay the imports so running train.py -h doesn't take 5,234,807 years
+    import tensorflow as tf
     import tensorflow.keras.backend as K
     from tensorflow.keras.layers import (Activation, AveragePooling2D, Dense, Embedding,
                               Flatten, Input, Lambda, UpSampling2D)
@@ -124,7 +126,7 @@ if __name__ == '__main__':
                      calculate_energy, scale, inpainting_attention)
 
     from architectures import build_generator, build_discriminator
-    from qcbm import qcbm_approx_probs, qcbm_probs, initialize_weights 
+    from qcbm import qcbm_approx_probs, qcbm_probs, initialize_weights, train_qcbm 
 
     # batch, latent size, and whether or not to be verbose with a progress bar
 
@@ -295,7 +297,9 @@ if __name__ == '__main__':
         mbd_energy
     ])
 
-    fake = Dense(1, activation='sigmoid', name='fakereal_output')(p)
+    qcbm_w = Dense(2**nb_qubits, activation='linear', name='qcbm')(p)
+
+    fake = Dense(1, activation='sigmoid', name='fakereal_output')(qcbm_w)
     discriminator_outputs = [fake, total_energy]
     discriminator_losses = ['binary_crossentropy', 'mae']
     # ACGAN case
@@ -313,6 +317,18 @@ if __name__ == '__main__':
             discriminator_losses.append('binary_crossentropy')
 
     discriminator = Model(calorimeter + [input_energy], discriminator_outputs)
+
+    tf.keras.utils.plot_model(
+	discriminator,
+	to_file="discriminator.png",
+	show_shapes=True,
+	show_dtype=False,
+	show_layer_names=True,
+	rankdir="TB",
+	expand_nested=False,
+	dpi=96,
+    )
+
 
     discriminator.compile(
         optimizer=Adam(lr=disc_lr, beta_1=adam_beta_1),
@@ -418,7 +434,10 @@ if __name__ == '__main__':
                 noise = qcbm_approx_probs(qcbm_weights, nb_qubits) 
                 noise = np.array([i for i in noise.values()])
                 noise = np.concatenate((noise,np.zeros(latent_size-noise.size)))
+                logger.info(noise)
+                logger.info(noise.shape)
                 noise = np.tile(noise, (batch_size, 1))
+                logger.info(noise.shape)
             else:
                 noise = np.random.normal(0, 1, (batch_size, latent_size))
 
@@ -512,3 +531,8 @@ if __name__ == '__main__':
 
         discriminator.save_weights('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch),
                                    overwrite=True)
+
+        dis_weights_f = h5py.File('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch), 'r')
+        qcbm_dis_weights = dis_weights_f['qcbm']['qcbm']['kernel:0'][:].flatten()
+        qcbm_weights = train_qcbm(qcbm_dis_weights, qcbm_weights)
+        dis_weights_f.close()
