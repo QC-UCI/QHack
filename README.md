@@ -25,13 +25,8 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 - Mode (energy) diversity
 
 
-### Resource Estimate
-We plan to use Floq for quantum circuit simulations. The AWS budget will mainly be spent on training QC-AAN, both the classical GAN trianing and the quantum QCBM circuit. A rough cost estimate:
-
-- Training classical CaloGAN on K80: 10 * (12 mins/epoch * 50 epochs) * $1.125 per hour = $110.25
-- Training QCBM (N qubit) with CaloGAN on Rigetti: 10 * (10E4 shots/measurement basis * 2^N * 20 epochs) * $3.5E-4 
-
-So, the cost of training QCBM dominates our budget and we probably need ~$1k to get meaningful results. Note if the cost of trianing QCBM gets too large, we might be able to do some tricks by sampling or freezing weight after certain epochs. Thanks again to Floq and AWS for those wonderful computing time!
+### Presentation
+For a non-techinical overview, please refer to this [slides](https://docs.google.com/presentation/d/1HLmEPXZ6pDgwi7S9o5oA7fcP3gIx_ZnOE1LcH7_C3XA/edit?usp=sharing).
 
 
 ### Reference
