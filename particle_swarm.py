@@ -1,5 +1,8 @@
 import pyswarms as ps
 from math import prod
+from pennylane import numpy as np
+
+"""Some code to wrap the particle swarm optimization from PySwarms"""
 
 def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_weight=None):
     """Optimizes the parameters with PySwarms particle swarm optimization
@@ -25,11 +28,16 @@ def optim_particle_swarm(cost, param_shape, num_particles=12, iters=100, init_we
     optimizer = ps.single.GlobalBestPSO(
                                 n_particles=num_particles, dimensions=size,
                                 options=options, init_pos=init_weight)
-    final_cost, pos = optimizer.optimize(f, iters=100, n_processes=None)
-    print("Final Cost:", final_cost)
+    final_cost, pos = optimizer.optimize(f, iters=iters, n_processes=None, verbose=True)
     return pos.reshape(param_shape)
 
+
+
+
+
+
 if __name__ == "__main__":
+    #Tests
     from loss_functions import KL_Loss, KL_Loss_dict
 
     #Generate an exact probability distribution to test on
