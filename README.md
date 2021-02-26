@@ -8,7 +8,7 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 ### Procedure
 - Construct QC-AAN with multi-basis QCBM and CaloGAN
 
-- Run experiments against particle physics dataset and compare it against vanilla CaloGAN with the metrics in the next section
+- Run experiments on the ECal Shower dataset [4] and compare QC-ANN against vanilla CaloGAN with the metrics in the next section
 
 - If time permits, repeat the experiments and compare it against 
   - Wasserstein CaloGAN
@@ -25,7 +25,12 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 
 
 ### Resource Estimate
+We plan to use Floq for quantum circuit simulations. The AWS budget will mainly be spent on training QC-AAN, both the classical GAN trianing and the quantum QCBM circuit. A rough cost estimate:
 
+- Training classical CaloGAN on K80: 10 * (12 mins/epoch * 50 epochs) * $1.125 per hour = $110.25
+- Training QCBM (N qubit) with CaloGAN on Rigetti: 10 * (10E4 shots/measurement basis * 2^N * 20 epochs) * $3.5E-4 
+
+So, the cost of training QCBM dominates our budget and we probably need ~$1k to get meaningful results. Note if the cost of trianing QCBM gets too large, we might be able to do some tricks by sampling or freezing weight after certain epochs. Thanks again to Floq and AWS for those wonderful computing time!
 
 
 ### Reference
@@ -34,4 +39,6 @@ To enhance the Generative Adversarial Networks (GAN) used in the High Energy Phy
 [2] A. Butter and T. Plehn, Generative Networks for LHC Events, ArXiv:2008.08558 [Hep-Ph] (2020).
 
 [3] M. Paganini, L. de Oliveira, and B. Nachman, CaloGAN: Simulating 3D High Energy Particle Showers in Multi-Layer Electromagnetic Calorimeters with Generative Adversarial Networks, Phys. Rev. D 97, 014021 (2018).
+
+[4] Nachman, Benjamin; de Oliveira, Luke; Paganini, Michela (2017), “Electromagnetic Calorimeter Shower Images”, Mendeley Data, V1, doi: 10.17632/pvn3xc3wy5.1
 
