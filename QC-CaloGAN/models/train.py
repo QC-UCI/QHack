@@ -160,6 +160,7 @@ if __name__ == '__main__':
     adam_beta_1 = parse_args.adam_beta
 
     yaml_file = parse_args.dataset
+    dis_png = False
 
     if nb_qubits > 0:
         latent_size = 2**nb_qubits
@@ -321,16 +322,17 @@ if __name__ == '__main__':
 
     discriminator = Model(calorimeter + [input_energy], discriminator_outputs)
 
-    tf.keras.utils.plot_model(
-	discriminator,
-	to_file="discriminator.png",
-	show_shapes=True,
-	show_dtype=False,
-	show_layer_names=True,
-	rankdir="TB",
-	expand_nested=False,
-	dpi=96,
-    )
+    if dis_png:
+        tf.keras.utils.plot_model(
+            discriminator,
+            to_file="discriminator.png",
+            show_shapes=True,
+            show_dtype=False,
+            show_layer_names=True,
+            rankdir="TB",
+            expand_nested=False,
+            dpi=96,
+        )
 
 
     discriminator.compile(
