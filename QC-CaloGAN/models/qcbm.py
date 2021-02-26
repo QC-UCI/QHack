@@ -130,8 +130,13 @@ def initialize_weights(layers, num_wires):
                 a[l].append([np.random.random()*np.pi*2 for _ in range(num_wires-1-i)])
     return np.array(a)
 
-def train_qcbm(true_prob, weights):
+
+def train_qcbm(exact_prob_dist, weights):
     """Train the QCBM"""
+    exact_prob_dict = {outcome:exact_prob_dist[outcome] for outcome in range(2**num_wires)}
+    def approx_cost_fn(weights):
+        return KL_Loss_dict(exact_prob_dict, qcbm_approx_probs(weights, num_wires))
+
     for i in range(1000):
         weights = weights - 0.01* SPSA_grad(approx_cost_fn, weights) #cost using approx sample probabilities
         #weights = weights - 0.01* exact_grad_cost(weights) #cost using exact sample probabilities
