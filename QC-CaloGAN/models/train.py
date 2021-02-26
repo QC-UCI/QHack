@@ -128,8 +128,9 @@ if __name__ == '__main__':
                      calculate_energy, scale, inpainting_attention)
 
     from architectures import build_generator, build_discriminator
-    from qcbm import (qcbm_approx_probs, qcbm_probs, initialize_weights, 
-                          train_qcbm, SPSA_grad, KL_Loss)
+    from QCBM import QCBM
+    #from qcbm import (qcbm_approx_probs, qcbm_probs, initialize_weights, 
+    #                      train_qcbm, SPSA_grad, KL_Loss)
 
     # batch, latent size, and whether or not to be verbose with a progress bar
 
@@ -411,7 +412,8 @@ if __name__ == '__main__':
 
     logger.info('commencing training')
 
-    qcbm_weights = initialize_weights(qcbm_nb_layers, nb_qubits)
+    qcbm = QCBM(qcbm_nb_layers, nb_qubits, qcbm_nb_shots, Floq=True)
+    #qcbm_weights = initialize_weights(qcbm_nb_layers, nb_qubits)
     for epoch in range(nb_epochs):
         logger.info('Epoch {} of {}'.format(epoch + 1, nb_epochs))
 
@@ -434,7 +436,7 @@ if __name__ == '__main__':
             # sample from QCBM
             if nb_qubits > 0:
                 logger.info('sampling prior from QCBM...')
-                noise = qcbm_approx_probs(qcbm_weights, nb_qubits) 
+                noise = qcbm.approx_prob_dict() 
                 noise = np.array([i for i in noise.values()])
                 noise = np.concatenate((noise,np.zeros(latent_size-noise.size)))
                 logger.info(noise)
@@ -538,5 +540,5 @@ if __name__ == '__main__':
         dis_weights_f = h5py.File('./weights/{0}{1:03d}.hdf5'.format(parse_args.d_pfx, epoch), 'r')
         qcbm_dis_weights = dis_weights_f['fakereal_output']['fakereal_output']['kernel:0'][:].flatten()
         logger.info("discriminator qcbm weights ({}): {}".format(qcbm_dis_weights.shape,qcbm_dis_weights))
-        qcbm_weights = train_qcbm(sigmoid(qcbm_dis_weights), qcbm_weights)
+        qcbm.train_qcbm_grad_descent(sigmoid(qcbm_dis_weights), iters=10)
         dis_weights_f.close()
