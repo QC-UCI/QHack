@@ -131,23 +131,25 @@ class QCBM():
     #Optimize KL divergence from a probability distribution
     #n_processes is an argument in PySwarms optimize function. Use >= 2 for parallelism
     def train_on_prob_dict(self, prob_dict, iters=10, n_processes=None):
-
+        
+        epsilon = 1/self.num_shots
         if not self._use_exact_probs:
             def _cost_fn(params):
-                return KL_Loss_dict(prob_dict, self._qcbm_approx_probs(params))
+                return KL_Loss_dict(prob_dict, self._qcbm_approx_probs(params), eps=epsilon)
         else:
             def _cost_fn(params):
                 q_dict = prob_array_to_dict(self._qcbm_probs(params, self.num_wires))
-                return KL_Loss_dict(prob_dict, q_dict)
+                return KL_Loss_dict(prob_dict, q_dict, eps=epsilon)
 
-        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=16, iters=iters, init_weight=self.weights)
+        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=12, iters=iters, init_weight=self.weights)
     
     def train_on_prob_array(self, prob_array, iters=10, n_processes=None):
-
+        
+        epsilon = 1/self.num_shots
         def _cost_fn(weights):
-            return KL_Loss(prob_array, self._qcbm_probs(weights, self.num_wires))
+            return KL_Loss(prob_array, self._qcbm_probs(weights, self.num_wires), eps=epsilon)
 
-        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=16, iters=iters, init_weight=self.weights)
+        self.weights = optim_particle_swarm(_cost_fn, self.weights.shape, num_particles=12, iters=iters, init_weight=self.weights)
 
 
 
@@ -163,6 +165,6 @@ if __name__ == "__main__":
     exact_prob_dist[0:64] = 1/64
     exact_prob_dict = {i:1/64 for i in range(64)}
 
-    qcbm = QCBM(7, 8, 5000, True)
+    qcbm = QCBM(7, 8, 1000, True)
     qcbm.train_on_prob_dict(exact_prob_dict, iters=100, n_processes=2)
 
